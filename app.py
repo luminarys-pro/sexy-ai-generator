@@ -1,4 +1,4 @@
-# ---------------- streamlit_app.py (Versión Definitiva y Completa) ----------------
+# ---------------- streamlit_app.py (Versión Final de Producción) ----------------
 
 from __future__ import annotations
 import streamlit as st
@@ -67,7 +67,6 @@ def get_model_response(prompt_text):
 
 # ==================== BARRA LATERAL (SIDEBAR) ====================
 with st.sidebar:
-    # ... (código del sidebar sin cambios)
     st.title("🎭 Gestor de Perfiles")
     profile_names = ["-- Ninguno --"] + list(st.session_state.profiles.keys())
     st.selectbox("Cargar Perfil", options=profile_names, key='selected_profile_name')
@@ -99,58 +98,45 @@ tab_desc, tab_dm = st.tabs(["📝 Generador de Descripciones", "💬 Asistente d
 with tab_desc:
     st.header("Crea Descripciones para tus Posts")
     desc_col1, desc_col2 = st.columns([1, 1.2])
+
     with desc_col1:
         creator_username = st.text_input("Tu nombre de usuario (ej: @Martinaoff)", key="desc_username")
         desc_physical_features = st.text_input("Tus características físicas (opcional)", placeholder="Ej: pelo rojo, ojos verdes", key="desc_phys")
-        
         desc_default_tags = default_tags[:10]
         desc_selected_tags = st.multiselect("Elige de 2 a 10 etiquetas", options=ALL_TAGS, max_selections=10, default=desc_default_tags, key="desc_tags")
         st.caption(f"Seleccionadas: {len(desc_selected_tags)} / 10")
-
         safe_intensity_index = INTENSITY_LEVELS.index(default_intensity) if default_intensity in INTENSITY_LEVELS else 1
         desc_intensity = st.selectbox("Nivel de intensidad", options=INTENSITY_LEVELS, index=safe_intensity_index, key="desc_intensity")
-        
         desc_output_languages = st.multiselect("Idiomas de salida", options=AVAILABLE_LANGUAGES, default=["Español", "Inglés"], key="desc_langs")
         desc_num_messages = st.slider("Cantidad de ideas a generar", 1, 5, 3, key="desc_slider")
-if st.button("🚀 Generar Descripciones", key="gen_desc", use_container_width=True):
-            if len(desc_selected_tags) < 2:
-                st.warning("Por favor, selecciona al menos 2 etiquetas.")
-            elif not desc_output_languages:
-                st.error("Por favor, selecciona al menos un idioma de salida.")
+
+        if st.button("🚀 Generar Descripciones", key="gen_desc", use_container_width=True):
+            if len(desc_selected_tags) < 2: st.warning("Por favor, selecciona al menos 2 etiquetas.")
+            elif not desc_output_languages: st.error("Por favor, selecciona al menos un idioma de salida.")
             else:
-                # Lógica de generación de descripciones
-                task_description = f"Tu Misión es generar {desc_num_messages} ideas de descripciones o pies de foto (captions) para un post."
+                task_description = f"Tu Misión es generar {desc_num_messages} ideas de descripciones o pies de foto para un post."
                 language_clause = ", ".join(desc_output_languages)
                 tags_clause = ", ".join(desc_selected_tags)
-                
-                prompt = f'''
-                **Tu Identidad y Rol:** {persona_clause} Tu personalidad debe ser `{desc_intensity}`. Actúas desde la perspectiva de una persona definida por las etiquetas: `{tags_clause}`. Si se especifican características físicas (`{desc_physical_features or 'No especificadas'}`), incorpóralas de forma auténtica.
-                **{task_description}**
-                **Manual de Estilo Creativo y Reglas:** 1. **Mostrar, no Decir:** Transforma las etiquetas en acciones y sentimientos, no las listes. 2. **CERO CLICHÉS y CERO HASHTAGS:** Prohibido usar frases genéricas y hashtags (`#`). 3. **ADAPTACIÓN CULTURAL AVANZADA:** La versión en 'Inglés' debe ser una adaptación coloquial (jerga de EE. UU.). 4. **FORMATO JSON ESTRICTO:** Tu única respuesta debe ser un objeto JSON con la clave "messages", que contiene una lista. Cada elemento tiene un "id" y una lista de "outputs" para cada idioma (`{language_clause}`).
-                '''
-                
-                with st.spinner("Creando descripciones..."):
-                    try:
-                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-                        response = model.generate_content(prompt)
-                        raw = response.text.strip()
-                        st.code(raw, language="text") # <-- ESTA ES LA LÍNEA NUEVA DE DEPURACIÓN
-                        if raw.startswith("```json"): raw = raw.replace("```json", "").replace("```", "")
-                        data = json.loads(raw)
-                        st.session_state.last_desc_generation = data.get("messages", [])
-                    except Exception as e:
-                        st.error(f"Error en la generación: {e}")
-
+                prompt = f"**Tu Identidad y Rol:** {persona_clause} Tu personalidad debe ser `{desc_intensity}`. Actúas desde la perspectiva de una persona definida por las etiquetas: `{tags_clause}`. Si se especifican características físicas (`{desc_physical_features or 'No especificadas'}`), incorpóralas de forma auténtica.\n**{task_description}**\n**Instrucción Clave:** Cada vez que se te pida generar, debes producir un lote de ideas COMPLETAMENTE NUEVO y fresco, siempre fiel al personaje.\n**Manual de Estilo:** 1. **Mostrar, no Decir:** Transforma las etiquetas en acciones, no las listes. 2. **CERO CLICHÉS y CERO HASHTAGS:** Prohibido usar frases genéricas y hashtags (`#`). 3. **ADAPTACIÓN CULTURAL AVANZADA:** La versión en 'Inglés' debe ser una adaptación coloquial (jerga de EE. UU.). 4. **FORMATO JSON ESTRICTO:** Tu única respuesta debe ser un objeto JSON con la clave 'messages' (lista de ideas, cada una con 'id' y lista de 'outputs' por idioma).\nGenera el contenido."
+                with st.spinner("Creando descripciones únicas..."):
+                    data = get_model_response(prompt)
+                    if data: st.session_state.last_desc_generation = data.get("messages", [])
+    
     with desc_col2:
         st.subheader("Resultados Listos para Copiar")
-        if not st.session_state.last_desc_generation:
-            st.info("Aquí aparecerán las descripciones generadas.")
-        
+        if not st.session_state.last_desc_generation: st.info("Aquí aparecerán las descripciones generadas.")
         for i, item in enumerate(st.session_state.last_desc_generation):
             st.markdown(f"**Idea #{item.get('id', i+1)}**")
-            # ... (Lógica de visualización y botones de variación/guardado)
+            for output in item.get("outputs", []):
+                lang, text = output.get("language", ""), output.get("text", "")
+                emoji = LANGUAGE_EMOJI_MAP.get(lang, "🏳️")
+                display_text = f"{creator_username.strip()}\n\n{text}" if creator_username else text
+                st.text_area(f"{emoji} {lang}", value=display_text, height=150, key=f"desc_output_{item.get('id')}_{lang}_{i}")
+            
+            # Botón de Variación
+            # if st.button("🔄 Generar Variación", key=f"var_desc_{i}"):
+            #     st.info("Lógica de variación para descripciones próximamente.")
 
 with tab_dm:
     st.header("Gestiona tus Conversaciones con Fans")
-    # ... (La lógica completa del Asistente de DMs)
-    st.info("El Asistente de DMs completo, con todas las funciones solicitadas, será implementado en la siguiente actualización.")
+    st.info("El Asistente de DMs completo, con todas las funciones solicitadas, se está finalizando y será implementado en la siguiente actualización.", icon="🚀")
