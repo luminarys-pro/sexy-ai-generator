@@ -112,18 +112,34 @@ with tab_desc:
         
         desc_output_languages = st.multiselect("Idiomas de salida", options=AVAILABLE_LANGUAGES, default=["Español", "Inglés"], key="desc_langs")
         desc_num_messages = st.slider("Cantidad de ideas a generar", 1, 5, 3, key="desc_slider")
-
-        if st.button("🚀 Generar Descripciones", key="gen_desc", use_container_width=True):
-            if len(desc_selected_tags) < 2: st.warning("Por favor, selecciona al menos 2 etiquetas.")
-            elif not desc_output_languages: st.error("Por favor, selecciona al menos un idioma de salida.")
+if st.button("🚀 Generar Descripciones", key="gen_desc", use_container_width=True):
+            if len(desc_selected_tags) < 2:
+                st.warning("Por favor, selecciona al menos 2 etiquetas.")
+            elif not desc_output_languages:
+                st.error("Por favor, selecciona al menos un idioma de salida.")
             else:
-                task_description = f"Tu Misión es generar {desc_num_messages} ideas de descripciones o pies de foto para un post."
+                # Lógica de generación de descripciones
+                task_description = f"Tu Misión es generar {desc_num_messages} ideas de descripciones o pies de foto (captions) para un post."
                 language_clause = ", ".join(desc_output_languages)
                 tags_clause = ", ".join(desc_selected_tags)
-                prompt = f"**Tu Identidad y Rol:** {persona_clause} Tu personalidad debe ser `{desc_intensity}`. Actúas desde la perspectiva de una persona definida por las etiquetas: `{tags_clause}`. Si se especifican características físicas (`{desc_physical_features or 'No especificadas'}`), incorpóralas de forma auténtica.\n**{task_description}**\n**Instrucción Clave:** Cada vez que se te pida generar, debes producir un lote de ideas COMPLETAMENTE NUEVO y fresco, siempre fiel al personaje.\n**Manual de Estilo:** 1. **Mostrar, no Decir:** Transforma las etiquetas en acciones, no las listes. 2. **CERO CLICHÉS y CERO HASHTAGS**. 3. **ADAPTACIÓN CULTURAL AVANZADA:** La versión en 'Inglés' debe ser una adaptación coloquial (jerga de EE. UU.). 4. **FORMATO JSON ESTRICTO:** Tu única respuesta debe ser un objeto JSON con la clave 'messages'.\nGenera el contenido."
-                with st.spinner("Creando descripciones únicas..."):
-                    data = get_model_response(prompt)
-                    if data: st.session_state.last_desc_generation = data.get("messages", [])
+                
+                prompt = f'''
+                **Tu Identidad y Rol:** {persona_clause} Tu personalidad debe ser `{desc_intensity}`. Actúas desde la perspectiva de una persona definida por las etiquetas: `{tags_clause}`. Si se especifican características físicas (`{desc_physical_features or 'No especificadas'}`), incorpóralas de forma auténtica.
+                **{task_description}**
+                **Manual de Estilo Creativo y Reglas:** 1. **Mostrar, no Decir:** Transforma las etiquetas en acciones y sentimientos, no las listes. 2. **CERO CLICHÉS y CERO HASHTAGS:** Prohibido usar frases genéricas y hashtags (`#`). 3. **ADAPTACIÓN CULTURAL AVANZADA:** La versión en 'Inglés' debe ser una adaptación coloquial (jerga de EE. UU.). 4. **FORMATO JSON ESTRICTO:** Tu única respuesta debe ser un objeto JSON con la clave "messages", que contiene una lista. Cada elemento tiene un "id" y una lista de "outputs" para cada idioma (`{language_clause}`).
+                '''
+                
+                with st.spinner("Creando descripciones..."):
+                    try:
+                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        response = model.generate_content(prompt)
+                        raw = response.text.strip()
+                        st.code(raw, language="text") # <-- ESTA ES LA LÍNEA NUEVA DE DEPURACIÓN
+                        if raw.startswith("```json"): raw = raw.replace("```json", "").replace("```", "")
+                        data = json.loads(raw)
+                        st.session_state.last_desc_generation = data.get("messages", [])
+                    except Exception as e:
+                        st.error(f"Error en la generación: {e}")
 
     with desc_col2:
         st.subheader("Resultados Listos para Copiar")
