@@ -1,4 +1,4 @@
-# ---------------- streamlit_app.py (Versión 10.1 - Corrección de Formulario) ----------------
+# ---------------- streamlit_app.py (Versión 10.1 - Corrección de Sintaxis) ----------------
 
 from __future__ import annotations
 import streamlit as st
@@ -37,4 +37,32 @@ except KeyError:
 # ==================== BARRA LATERAL (SIDEBAR) PARA PERFILES ====================
 with st.sidebar:
     st.title("🎭 Gestor de Perfiles")
-    st.markdown("Crea y guarda diferentes personalidades
+    st.markdown("Crea y guarda diferentes personalidades para la IA.")
+
+    profile_names = ["-- Ninguno --"] + list(st.session_state.profiles.keys())
+    active_profile_name = st.selectbox("Cargar Perfil", options=profile_names, key='selected_profile_name')
+    st.markdown("---")
+
+    with st.expander("➕ Crear Nuevo Perfil"):
+        with st.form("new_profile_form", clear_on_submit=True):
+            new_profile_name = st.text_input("Nombre del Perfil*")
+            new_profile_desc = st.text_area("Descripción de la Personalidad*", height=200, placeholder="Ej: Eres una diosa dominante y juguetona...")
+            new_profile_tags = st.multiselect("Etiquetas Predeterminadas", options=ALL_TAGS)
+            new_profile_intensity = st.selectbox("Intensidad Predeterminada", options=INTENSITY_LEVELS, index=1)
+            submitted = st.form_submit_button("Guardar Perfil")
+            if submitted:
+                if new_profile_name and new_profile_desc:
+                    st.session_state.profiles[new_profile_name] = {"description": new_profile_desc, "tags": new_profile_tags, "intensity": new_profile_intensity}
+                    st.session_state.selected_profile_name = new_profile_name
+                    st.success(f"¡Perfil '{new_profile_name}' guardado!")
+                else:
+                    st.error("El nombre y la descripción del perfil son obligatorios.")
+
+    if active_profile_name != "-- Ninguno --":
+        st.markdown("---")
+        if st.button(f"🗑️ Eliminar Perfil '{active_profile_name}'", use_container_width=True):
+            del st.session_state.profiles[active_profile_name]
+            st.session_state.selected_profile_name = "-- Ninguno --"
+            st.rerun()
+
+# ==================== PÁGINA PRINCIPAL ====================
