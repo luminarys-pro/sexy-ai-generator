@@ -1,4 +1,4 @@
-# ---------------- streamlit_app.py (Versión 8.0 - Corrección Final de UI) ----------------
+# ---------------- streamlit_app.py (Versión 9.0 - Funcionalidad Completa) ----------------
 
 from __future__ import annotations
 import streamlit as st
@@ -31,11 +31,10 @@ DEFAULT_PERSONA = "Eres una IA que encarna el rol de una experta en psicología 
 st.set_page_config(page_title="Sexy AI Message Generator", page_icon="✨", layout="wide")
 
 # --- INICIALIZACIÓN DE LA MEMORIA DE SESIÓN ---
-# Se asegura de que las variables existan desde el principio
 if 'favorites' not in st.session_state: st.session_state.favorites = []
 if 'last_generation' not in st.session_state: st.session_state.last_generation = []
 if 'profiles' not in st.session_state: st.session_state.profiles = {}
-# 'active_profile_name' se manejará con el propio widget
+if 'selected_profile_name' not in st.session_state: st.session_state.selected_profile_name = "-- Ninguno --"
 
 # ---------- CLAVE GEMINI ----------
 try:
@@ -49,16 +48,8 @@ except KeyError:
 with st.sidebar:
     st.title("🎭 Gestor de Perfiles")
     st.markdown("Crea y guarda diferentes personalidades para la IA.")
-
     profile_names = ["-- Ninguno --"] + list(st.session_state.profiles.keys())
-    
-    # Selector para cargar un perfil existente. Usamos una clave 'key' para que Streamlit maneje el estado.
-    active_profile_name = st.selectbox(
-        "Cargar Perfil",
-        options=profile_names,
-        key='selected_profile_name' # Clave para vincular al estado de la sesión
-    )
-
+    active_profile_name = st.selectbox("Cargar Perfil", options=profile_names, key='selected_profile_name')
     st.markdown("---")
 
     with st.expander("➕ Crear Nuevo Perfil"):
@@ -70,11 +61,7 @@ with st.sidebar:
             submitted = st.form_submit_button("Guardar Perfil")
             if submitted:
                 if new_profile_name and new_profile_desc:
-                    st.session_state.profiles[new_profile_name] = {
-                        "description": new_profile_desc,
-                        "tags": new_profile_tags,
-                        "intensity": new_profile_intensity
-                    }
+                    st.session_state.profiles[new_profile_name] = {"description": new_profile_desc, "tags": new_profile_tags, "intensity": new_profile_intensity}
                     st.session_state.selected_profile_name = new_profile_name
                     st.success(f"¡Perfil '{new_profile_name}' guardado!")
                     st.rerun()
@@ -96,39 +83,33 @@ st.markdown("by **Luminarys Production**")
 # --- SECCIÓN PARA MOSTRAR FAVORITOS GUARDADOS ---
 if st.session_state.favorites:
     st.markdown("---")
-    with st.expander("⭐ Mis Contenidos Favoritos Guardados", expanded=True):
+    with st.expander("⭐ Mis Contenidos Favoritos Guardados", expanded=False): # Contraído por defecto para ahorrar espacio
         for i, fav_item in enumerate(st.session_state.favorites):
-            # Lógica para mostrar y eliminar favoritos (sin cambios)
             st.markdown(f"**Favorito #{i+1}**")
-            # ... (código de visualización y borrado se mantiene igual)
-            outputs = fav_item.get("outputs", [])
-            if outputs:
-                for output in outputs:
-                    lang, text = output.get("language", ""), output.get("text", "")
-                    emoji = LANGUAGE_EMOJI_MAP.get(lang, "🏳️")
-                    st.markdown(f"{emoji} **{lang}:** {text}")
+            for output in fav_item.get("outputs", []):
+                lang, text = output.get("language", ""), output.get("text", "")
+                emoji = LANGUAGE_EMOJI_MAP.get(lang, "🏳️")
+                st.markdown(f"{emoji} **{lang}:** {text}")
             if st.button(f"🗑️ Eliminar", key=f"delete_fav_{fav_item['unique_id']}"):
                 st.session_state.favorites.pop(i)
                 st.rerun()
             st.markdown("---")
 
-# <<<<<<<<<<<<<<<<<<<< INICIO DE LA CORRECCIÓN LÓGICA >>>>>>>>>>>>>>>>>>>>
-# Se obtienen los valores por defecto DESPUÉS de que el usuario interactúe con la barra lateral.
+# --- LÓGICA DE CARGA DE PERFIL ---
 active_profile_data = st.session_state.profiles.get(st.session_state.get('selected_profile_name', '-- Ninguno --'), {})
 default_tags = active_profile_data.get('tags', [])
 default_intensity = active_profile_data.get('intensity', 'Coqueto')
 
-# ---------- COLUMNAS PARA LA INTERFAZ ----------
+# --- DEFINICIÓN DE LA INTERFAZ EN COLUMNAS ---
 col1, col2 = st.columns([1, 1.2])
 
-with col1:
+with col1: # COLUMNA DE CONTROLES
     st.header("1. Define tu Contenido")
     generation_type = st.selectbox("¿Qué quieres generar?", ("Descripción para Post", "DM para Fans"))
     dm_type = st.radio("🎯 Propósito del DM", ("Mass DM Free (Atraer)", "Mass DM $ (Vender)", "Mass Sub (Retener)")) if generation_type == "DM para Fans" else ""
     physical_features = st.text_input("✨ Tus características físicas (opcional)", placeholder="Ej: pelo rojo, ojos verdes, tatuajes") if generation_type == "Descripción para Post" else ""
-    
     selected_tags = st.multiselect("Elige de 2 a 10 etiquetas", options=ALL_TAGS, max_selections=10, default=default_tags)
-    intensity = st.selectbox("Nivel de intensidad", options=INTENSITY_LEVELS, index=INTENSITY_LEVELS.index(default_intensity), help="Este valor se actualiza al cargar un perfil.")
+    intensity = st.selectbox("Nivel de intensidad", options=INTENSITY_LEVELS, index=INTENSITY_LEVELS.index(default_intensity))
     output_languages = st.multiselect("Idiomas de salida", options=AVAILABLE_LANGUAGES, default=["Español", "Inglés"])
     num_messages = st.slider("Cantidad de ideas a generar", 1, 10, 3)
 
@@ -137,8 +118,6 @@ with col1:
         elif not output_languages: st.error("Por favor, selecciona al menos un idioma de salida.")
         else:
             persona_clause = active_profile_data.get('description', DEFAULT_PERSONA)
-            # El resto de la lógica del prompt y la llamada a la API no necesita cambios
-            # ... (código idéntico al anterior)
             language_clause = ", ".join(output_languages)
             tags_clause = ", ".join(selected_tags)
             task_description = f"Tu Misión es generar {num_messages} ideas de mensajes directos (DM) con el propósito de: `{dm_type}`." if generation_type == "DM para Fans" else f"Tu Misión es generar {num_messages} ideas de descripciones o pies de foto para un post."
@@ -163,26 +142,63 @@ with col1:
                     st.error(f"Ocurrió un error: {e}")
                     st.session_state.last_generation = []
 
-with col2:
-    if st.session_state.last_generation:
-        st.header("2. Elige tus Favoritos")
-        for i, item in enumerate(st.session_state.last_generation):
-            # Lógica para mostrar y guardar el contenido recién generado (sin cambios)
-            idea_id = item.get("id", i + 1)
-            outputs = item.get("outputs", [])
+with col2: # COLUMNA DE RESULTADOS
+    st.header("2. Elige y Refina tu Contenido")
+    if not st.session_state.last_generation:
+        st.info("Aquí aparecerán las ideas generadas por la IA.")
+        
+    for i, item in enumerate(st.session_state.last_generation):
+        idea_id = item.get("id", i + 1)
+        outputs = item.get("outputs", [])
+        if not 'unique_id' in item:
             item['unique_id'] = hash(frozenset(o['text'] for o in outputs))
-            st.markdown(f"**Idea de Contenido #{idea_id}**")
-            if outputs:
-                for output in outputs:
-                    lang, text = output.get("language", ""), output.get("text", "")
-                    emoji = LANGUAGE_EMOJI_MAP.get(lang, "🏳️")
-                    st.markdown(f"{emoji} **{lang}:** {text}")
+        
+        st.markdown(f"**Idea de Contenido #{idea_id}**")
+        if outputs:
+            for output in outputs:
+                lang, text = output.get("language", ""), output.get("text", "")
+                emoji = LANGUAGE_EMOJI_MAP.get(lang, "🏳️")
+                st.markdown(f"{emoji} **{lang}:** {text}")
+        
+        # --- MEJORA: Botones de acción en columnas ---
+        b_col1, b_col2 = st.columns(2)
+        with b_col1:
             is_favorited = any(fav.get('unique_id') == item['unique_id'] for fav in st.session_state.favorites)
             if is_favorited:
                 st.success("✔️ Guardado")
             else:
-                if st.button(f"⭐ Guardar Idea", key=f"save_{item['unique_id']}"):
+                if st.button(f"⭐ Guardar Idea", key=f"save_{item['unique_id']}", use_container_width=True):
                     st.session_state.favorites.append(item)
                     st.session_state.last_generation.pop(i)
                     st.rerun()
-            st.markdown("---")
+        
+        with b_col2:
+            if st.button("🔄 Generar Variación", key=f"variation_{item['unique_id']}", use_container_width=True):
+                original_text = next((o['text'] for o in outputs if o.get('language') == 'Español'), outputs[0]['text'])
+                tags_clause = ", ".join(selected_tags)
+                
+                variation_prompt = f"""
+                **Tu Rol:** Eres un experto en copywriting creativo y persuasivo.
+                **Tu Tarea:** Toma el siguiente texto y reescríbelo. Mantén la idea central, el tono y el significado, pero usa diferentes palabras y estructuras para crear una variación fresca y original. Sé más evocador.
+                **Texto Base:** "{original_text}"
+                **Contexto Original (para mantener el tono):** Etiquetas=`{tags_clause}`, Intensidad=`{intensity}`.
+                **Instrucción de Idioma:** Genera una versión para cada uno de estos idiomas: `{", ".join(output_languages)}`. La versión en inglés debe ser una adaptación coloquial y natural.
+                **Formato de Salida:** Devuelve un ÚNICO objeto JSON que represente UNA SOLA idea de mensaje, con la estructura: {{"id": {idea_id}, "outputs": [...]}}
+                """.strip()
+
+                with st.spinner("✨ Refinando idea..."):
+                    try:
+                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        response = model.generate_content(variation_prompt)
+                        raw = response.text.strip()
+                        if raw.startswith("```json"): raw = raw.replace("```json", "").replace("```", "").strip()
+                        variation_data = json.loads(raw)
+                        
+                        # Reemplaza el item en la lista de generación con la nueva variación
+                        st.session_state.last_generation[i] = variation_data
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(f"Error al generar variación: {e}")
+
+        st.markdown("---")
