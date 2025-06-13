@@ -1,4 +1,4 @@
-# ---------------- streamlit_app.py (Versión 2.0 Luminarys Production) ----------------
+# ---------------- streamlit_app.py (Versión 3.0 - Sistema de Etiquetas) ----------------
 
 from __future__ import annotations
 import streamlit as st
@@ -9,62 +9,36 @@ import os
 
 # ---------- LISTAS DE OPCIONES ----------
 
-# Lista de nichos más completa
-ALL_NICHES = [
-    # Atributos Físicos / Estética
-    "Atributo: BBW / Talla Grande",
-    "Atributo: Pies (Foot Fetish)",
-    "Atributo: Madura (Mature / Cougar / MILF)",
-    "Atributo: Petite / Pequeña",
-    "Atributo: Fitness / Musculosa",
-    "Atributo: Tatuajes y Piercings (Alt-Model)",
-    "Atributo: Gótica / Emo",
-    "Atributo: Pelirroja",
-    "Atributo: Rubia",
-    "Atributo: Latina",
-    "Atributo: Asiática",
-    "Atributo: Ébano (Ebony)",
-    # Actividades / Fetiches
-    "Actividad: ASMR Erótico",
-    "Actividad: Dominación Financiera (Findom)",
-    "Actividad: Juego de Roles (Roleplay)",
-    "Actividad: Humillación / Degradación",
-    "Actividad: Adoración (Worship)",
-    "Actividad: BDSM / Bondage",
-    "Actividad: Cuckolding",
-    "Actividad: Contenido de Embarazo (Pregnancy)",
-    "Actividad: Fumar (Smoking Fetish)",
-    # Hobbies / Creatividad
-    "Hobby: Arte Sin Censura",
-    "Hobby: Cosplay (Erótico y General)",
-    "Hobby: Escritura / Poesía Erótica",
-    "Hobby: Gamer / Videojuegos",
-    "Hobby: Conversación (Experiencia Novio/a Virtual)",
+# Nueva lista completa de etiquetas, organizada para el selector
+ALL_TAGS = [
+    # Atributos Físicos y Apariencia
+    "Edad: Teen (18+)", "Edad: Joven (20-29)", "Edad: MILF (30-45)", "Edad: Madura/Cougar (45+)",
+    "Cuerpo: Petite/Delgada", "Cuerpo: Curvy/Gruesa (Thick)", "Cuerpo: BBW/Talla Grande", "Cuerpo: Atlético/Fitness", "Cuerpo: Musculosa",
+    "Cabello: Rubia", "Cabello: Morena", "Cabello: Pelirroja", "Cabello: Pelo Negro",
+    "Etnia: Latina", "Etnia: Asiática", "Etnia: Ébano (Ebony)", "Etnia: India", "Etnia: Blanca/Caucásica",
+    "Rasgos: Tatuajes", "Rasgos: Piercings", "Rasgos: Pechos Grandes", "Rasgos: Pechos Pequeños", "Rasgos: Pechos Naturales", "Rasgos: Trasero Grande (Big Ass)",
+    "Participantes: Solo (Chica)", "Participantes: Pareja (Chica/Chico)", "Participantes: Pareja (Chica/Chica)",
+    # Actos y Prácticas
+    "Práctica: Anal", "Práctica: Oral (Blowjob/Deepthroat)", "Práctica: Doble Penetración", "Práctica: Creampie",
+    "Práctica: Squirt", "Práctica: Handjob", "Práctica: Footjob", "Práctica: Bukkake / Gangbang",
+    "Práctica: BDSM", "Práctica: Bondage", "Práctica: Sumisión", "Práctica: Dominación",
+    "Fetiche: Látex", "Fetiche: Cuero (Leather)", "Fetiche: Tacones (Heels)", "Fetiche: Lencería",
+    # Géneros, Temáticas y Escenarios
+    "Rol: Madrastra/Padrastro", "Rol: Hermanastra/o", "Rol: Profesora/Estudiante", "Rol: Jefa/Empleado", "Rol: Doctora/Enfermera",
+    "Escenario: Público", "Escenario: Oficina", "Escenario: Casting/Entrevista", "Escenario: Masaje", "Escenario: Fiesta", "Escenario: Cámara Espía (Spycam)",
+    "Parodia: Dibujos Animados / Anime", "Parodia: Cosplay",
+    "Estilo: Amateur / Casero", "Estilo: POV (Punto de Vista)",
 ]
 
-# Lista de intensidades reordenada y sin Cosplay
 INTENSITY_LEVELS = ("Neutral", "Coqueto", "Sumisa", "Dominante", "Fetichista")
-
-# Lista de idiomas disponibles
 AVAILABLE_LANGUAGES = ("Español", "Inglés", "Francés", "Portugués", "Alemán", "Ruso", "Neerlandés")
-
-# Mapeo de idiomas a emojis para una visualización más atractiva
 LANGUAGE_EMOJI_MAP = {
-    "Español": "🇪🇸",
-    "Inglés": "🇺🇸",
-    "Francés": "🇫🇷",
-    "Portugués": "🇵🇹🇧🇷",
-    "Alemán": "🇩🇪",
-    "Ruso": "🇷🇺",
-    "Neerlandés": "🇳🇱",
+    "Español": "🇪🇸", "Inglés": "🇺🇸", "Francés": "🇫🇷", "Portugués": "🇵🇹🇧🇷",
+    "Alemán": "🇩🇪", "Ruso": "🇷🇺", "Neerlandés": "🇳🇱",
 }
 
 # ---------- CONFIGURACIÓN PÁGINA ----------
-st.set_page_config(
-    page_title="Sexy AI Message Generator",
-    page_icon="✨",
-    layout="centered",
-)
+st.set_page_config(page_title="Sexy AI Message Generator", page_icon="✨", layout="centered")
 
 # ---------- CLAVE GEMINI ----------
 try:
@@ -80,107 +54,82 @@ st.markdown("by **Luminarys Production**")
 st.write("---")
 
 # ---------- CONTROLES DE LA APP ----------
+generation_type = st.selectbox("1. ¿Qué quieres generar?", ("Descripción para Post", "DM para Fans"))
 
-# 1. Selector de tipo de generación
-generation_type = st.selectbox(
-    "1. ¿Qué quieres generar?",
-    ("DM para Fans", "Descripción para Post")
-)
-
-# Controles condicionales
 dm_type = ""
 physical_features = ""
 if generation_type == "DM para Fans":
-    dm_type = st.radio(
-        "🎯 Propósito del DM",
-        ("Mass DM Free (Atraer)", "Mass DM $ (Vender)", "Mass Sub (Retener)"),
-        index=0,
-    )
-else: # generation_type == "Descripción para Post"
-    physical_features = st.text_input(
-        "✨ Tus 3 características físicas principales",
-        placeholder="Ej: pelo rojo, ojos verdes, tatuajes en el brazo",
-        help="Describe 3 rasgos físicos para que la IA los mencione sutilmente en la descripción."
-    )
+    dm_type = st.radio("🎯 Propósito del DM", ("Mass DM Free (Atraer)", "Mass DM $ (Vender)", "Mass Sub (Retener)"), index=0)
+else:
+    physical_features = st.text_input("✨ Tus 3 características físicas principales (opcional)", placeholder="Ej: pelo rojo, ojos verdes, tatuajes", help="Describe 3 rasgos para que la IA se inspire y los incorpore.")
 
-selected_niches = st.multiselect(
-    "2. Elige hasta 2 nichos para combinar",
-    options=ALL_NICHES,
-    max_selections=2,
+# MEJORA: Sistema de Etiquetas
+selected_tags = st.multiselect(
+    "2. Elige de 2 a 10 etiquetas para definir el contenido",
+    options=ALL_TAGS,
+    max_selections=10,
 )
 
-# 2. Selector de intensidad actualizado
-intensity = st.selectbox(
-    "3. Nivel de intensidad",
-    options=INTENSITY_LEVELS,
-    index=1 # 'Coqueto' por defecto
-)
-
-# 4. Selector de idiomas
-output_languages = st.multiselect(
-    "4. Idiomas de salida",
-    options=AVAILABLE_LANGUAGES,
-    default=["Español", "Inglés"]
-)
-
-num_messages = st.slider(
-    "5. Cantidad de ideas a generar", 1, 10, 3
-)
+intensity = st.selectbox("3. Nivel de intensidad", options=INTENSITY_LEVELS, index=1)
+output_languages = st.multiselect("4. Idiomas de salida", options=AVAILABLE_LANGUAGES, default=["Español", "Inglés"])
+num_messages = st.slider("5. Cantidad de ideas a generar", 1, 10, 3)
 
 st.write("---")
 
 # ================= BOTÓN =================
 if st.button("🚀 Generar Contenido"):
-    if not output_languages:
+    # MEJORA: Validación de selección de etiquetas
+    if len(selected_tags) < 2:
+        st.warning("Por favor, selecciona al menos 2 etiquetas para obtener mejores resultados.")
+    elif not output_languages:
         st.error("Por favor, selecciona al menos un idioma de salida.")
     else:
-        # ---------- CONSTRUCCIÓN DINÁMICA DEL PROMPT ----------
+        # ---------- CONSTRUCCIÓN DEL PROMPT FINAL CON ETIQUETAS ----------
         language_clause = ", ".join(output_languages)
-        niche_clause = ", ".join(selected_niches) if selected_niches else "General / Sin nicho específico"
+        tags_clause = ", ".join(selected_tags)
 
         task_description = ""
         if generation_type == "DM para Fans":
-            task_description = f"Tu Tarea es generar {num_messages} mensajes directos (DM) para fans. El propósito de estos DMs es: `{dm_type}`."
-        else: # generation_type == "Descripción para Post"
-            task_description = f"Tu Tarea es generar {num_messages} descripciones o pies de foto (captions) para un post en una red social. Estas descripciones deben ser seductoras y atractivas."
-            if physical_features:
-                task_description += f" La creadora ha descrito sus características físicas como: `{physical_features}`. Debes incorporar sutilmente alguna de estas características en el texto para hacerlo más personal."
+            task_description = f"Tu Misión es generar {num_messages} ideas de mensajes directos (DM) para fans con el propósito de: `{dm_type}`."
+        else:
+            task_description = f"Tu Misión es generar {num_messages} ideas de descripciones o pies de foto (captions) para un post en una red social."
 
         prompt = f"""
-        **Tu Rol y Personalidad:**
-        Eres una IA que encarna el rol de una experta en psicología sexual y socioemocional, psicología de ventas y estrategia de marketing. Eres una creadora de contenido veterana y exitosa en plataformas como OnlyFans, Fansly y FanCentro. Entiendes profundamente cómo crear conexiones y deseo a través de las palabras. Tienes un conocimiento enciclopédico en todas las áreas de la sexualidad y las dinámicas de los nichos de contenido para adultos.
+        **Tu Identidad y Rol (Actúa como si fueras esta persona):**
+        Eres una creadora de contenido para adultos. Encarnas a una persona definida por las siguientes etiquetas: `{tags_clause}`.
+        Tu personalidad y tono deben ser `{intensity}`.
+        Si se especifican características físicas adicionales (`{physical_features if physical_features else 'No especificadas'}`), incorpóralas para dar un toque personal y auténtico.
+        Tu conocimiento base es el de una experta en psicología sexual, de ventas y marketing digital para creadores.
 
-        **Instrucción Principal:**
-        {task_description}
+        **{task_description}**
 
-        **Reglas Estrictas para la Generación:**
-        1.  **Combinación de Nichos:** El contenido debe fusionar creativamente los siguientes nichos: `{niche_clause}`. Si no se selecciona ninguno, enfócate en un estilo más general.
-        2.  **Intensidad:** El tono debe corresponder a este nivel de intensidad: `{intensity}`.
-        3.  **Generación Multilingüe:** Para CADA una de las {num_messages} ideas, debes proveer una versión en CADA UNO de los siguientes idiomas: `{language_clause}`.
-        4.  **Adaptación Cultural (Inglés):** La versión en 'Inglés' NO debe ser una traducción literal del español. Debe sonar como una hablante nativa de Estados Unidos (USA), usando jerga y expresiones coloquiales apropiadas para el nicho y la intensidad.
-        5.  **Formato de Salida Obligatorio (JSON):** Devuelve ÚNICAMENTE un objeto JSON válido. La estructura debe ser una clave "messages", que contiene una lista. Cada elemento de la lista es una 'idea' de mensaje. Cada 'idea' contiene una clave "outputs", que es una lista de objetos, donde cada objeto tiene una clave "language" y una "text".
-
-            **Ejemplo de formato de salida para 1 idea en 2 idiomas:**
+        **Manual de Estilo Creativo (Reglas Obligatorias):**
+        1.  **SÍNTESIS CREATIVA:** Tu creación DEBE ser una representación directa y creativa de la combinación de TODAS las etiquetas seleccionadas. Cada etiqueta es una orden.
+        2.  **CERO CLICHÉS:** PROHIBIDO usar frases genéricas como "suscríbete", "contenido exclusivo", "no te lo pierdas". Sé original, provocadora e ingeniosa.
+        3.  **VARIEDAD RADICAL:** Cada una de las {num_messages} ideas debe ser RADICALMENTE diferente de las otras. Usa ángulos y técnicas creativas distintas para cada una (storytelling, preguntas, etc.).
+        4.  **GENERACIÓN MULTILINGÜE:** Para CADA idea, debes proveer una versión en CADA UNO de los siguientes idiomas: `{language_clause}`. La versión en 'Inglés' debe ser una adaptación coloquial y natural (jerga de EE. UU.), no una traducción literal.
+        5.  **FORMATO DE SALIDA (JSON ESTRICTO):** Tu única respuesta debe ser un objeto JSON válido con la clave "messages", que contiene una lista de ideas. Cada idea tiene un "id" y una lista de "outputs" para cada idioma.
+            **Ejemplo de formato de salida:**
             {{
               "messages": [
                 {{
                   "id": 1,
                   "outputs": [
-                    {{ "language": "Español", "text": "El texto en español va aquí." }},
-                    {{ "language": "Inglés", "text": "The English text goes here." }}
+                    {{ "language": "Español", "text": "Texto en español basado en las etiquetas." }},
+                    {{ "language": "Inglés", "text": "Colloquial English text based on the tags." }}
                   ]
                 }}
               ]
             }}
 
-        Ahora, basándote en tu profundo conocimiento, genera el contenido.
+        Ahora, encarna tu rol y genera el contenido más específico y potente posible.
         """.strip()
 
         # ---------- LLAMADA A GEMINI ----------
-        with st.spinner("🧠 La IA está pensando..."):
+        with st.spinner("🧠 La IA está combinando las etiquetas en algo espectacular..."):
             try:
                 model = genai.GenerativeModel('gemini-1.5-flash-latest')
-                generation_config = genai.types.GenerationConfig(temperature=1.0) # Máxima creatividad
+                generation_config = genai.types.GenerationConfig(temperature=1.0)
                 response = model.generate_content(prompt, generation_config=generation_config)
                 raw = response.text.strip()
             except Exception as exc:
@@ -198,9 +147,10 @@ if st.button("🚀 Generar Contenido"):
                     st.error("La respuesta de la IA no contenía mensajes. Intenta de nuevo.")
                     st.code(raw, language="json")
                 else:
-                    st.success("✅ ¡Contenido fresco generado!")
-                    for i, item in enumerate(msgs, 1):
-                        st.markdown(f"#### Idea de Contenido #{i}")
+                    st.success("✅ ¡Contenido de ultra-nicho generado!")
+                    for item in msgs:
+                        idea_id = item.get("id", "?")
+                        st.markdown(f"#### Idea de Contenido #{idea_id}")
                         outputs = item.get("outputs", [])
                         if outputs:
                             for output in outputs:
@@ -211,15 +161,8 @@ if st.button("🚀 Generar Contenido"):
                         st.write("---")
 
             except json.JSONDecodeError:
-                st.error("❌ La IA devolvió un formato de JSON inválido. Respuesta bruta:")
+                st.error("❌ La IA devolvió un formato de JSON inválido. Revisa la respuesta bruta:")
                 st.code(raw, language="text")
 
 # ---------- PIE ----------
-st.markdown(
-    """
-<div style='text-align:center;font-size:0.8em; margin-top: 2em;'>
-Powered by Google Gemini
-</div>
-""",
-    unsafe_allow_html=True,
-)
+st.markdown("<div style='text-align:center;font-size:0.8em; margin-top: 2em;'>Powered by Google Gemini</div>", unsafe_allow_html=True)
