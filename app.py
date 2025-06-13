@@ -92,7 +92,7 @@ with st.sidebar:
         st.button(f"🗑️ Eliminar Perfil '{st.session_state.selected_profile_name}'", on_click=delete_active_profile, use_container_width=True, type="primary")
 
 # ==================== PÁGINA PRINCIPAL ====================
-st.title("💌 AI Content Assistant")
+st.title("💌 AI Content Assistant - PRUEBA")
 st.markdown("by **Luminarys Production**")
 
 active_profile_data = st.session_state.profiles.get(st.session_state.get('selected_profile_name', '-- Ninguno --'), {})
