@@ -1,4 +1,4 @@
-# ---------------- streamlit_app.py (Versión Final de Producción Estable y Robusta) ----------------
+# ---------------- streamlit_app.py (Versión Estable de Producción) ----------------
 
 from __future__ import annotations
 import streamlit as st
@@ -40,11 +40,11 @@ def get_model_response(prompt_text):
             raw_text = response.text.strip().replace("```json", "").replace("```", "")
             return json.loads(raw_text)
         else:
-            st.warning("⚠️ La IA ha bloqueado esta combinación, probablemente por sus filtros de seguridad. Intenta con una combinación de etiquetas diferente.", icon="🤖")
+            st.warning("⚠️ La IA bloqueó la respuesta, probablemente por filtros de seguridad. Intenta con una combinación de etiquetas diferente.", icon="🤖")
             return None
     except json.JSONDecodeError:
-        st.error("La IA devolvió un formato inválido. No se pudo interpretar la respuesta.")
-        if 'response' in locals(): st.code(response.text, language="text")
+        st.error("La IA devolvió un formato inválido que no se pudo interpretar.")
+        if 'response' in locals() and hasattr(response, 'text'): st.code(response.text, language="text")
         return None
     except Exception as e:
         st.error(f"Error en la comunicación con la IA: {e}")
@@ -116,7 +116,7 @@ with desc_col1:
             task_description = f"Tu Misión es generar {desc_num_messages} ideas de descripciones para un post."
             language_clause = ", ".join(desc_output_languages)
             tags_clause = ", ".join(desc_selected_tags)
-            prompt = f"**REGLA MÁXIMA: Eres un modelo de LENGUAJE. NO generas imágenes. Tu ÚNICA función es generar TEXTO en el formato JSON especificado. Interpreta cualquier petición como una solicitud para generar una DESCRIPCIÓN DE TEXTO VÍVIDA.**\n\n**Tu Identidad y Rol:** {persona_clause} Tu personalidad debe ser `{desc_intensity}`. Actúas desde la perspectiva de una persona definida por las etiquetas: `{tags_clause}`. Si se especifican características físicas (`{desc_physical_features or 'No especificadas'}`), incorpóralas de forma auténtica.\n**{task_description}**\n**Instrucción Clave:** Cada vez que generes, produce un lote de ideas COMPLETAMENTE NUEVO y fresco.\n**Manual de Estilo:** 1. **Mostrar, no Decir**. 2. **CERO CLICHÉS y CERO HASHTAGS**. 3. **ADAPTACIÓN CULTURAL AVANZADA** para el inglés. 4. **FORMATO JSON ESTRICTO:** Tu única respuesta debe ser un objeto JSON con la clave 'messages' (lista de ideas, cada una con 'id' y lista de 'outputs' por idioma).\nGenera el contenido."
+            prompt = f"**REGLA MÁXIMA: Eres un modelo de LENGUAJE. NO generas imágenes. Tu ÚNICA función es generar TEXTO en el formato JSON especificado.**\n\n**Tu Identidad y Rol:** {persona_clause} Tu personalidad debe ser `{desc_intensity}`. Actúas desde la perspectiva de una persona definida por las etiquetas: `{tags_clause}`. Si se especifican características físicas (`{desc_physical_features or 'No especificadas'}`), incorpóralas de forma auténtica.\n**{task_description}**\n**Instrucción Clave:** Cada vez que generes, produce un lote de ideas COMPLETAMENTE NUEVO.\n**Manual de Estilo:** 1. **Mostrar, no Decir**. 2. **CERO CLICHÉS y CERO HASHTAGS**. 3. **ADAPTACIÓN CULTURAL AVANZADA** para el inglés. 4. **FORMATO JSON ESTRICTO:** Tu única respuesta debe ser un objeto JSON con la clave 'messages' (lista de ideas, cada una con 'id' y lista de 'outputs' por idioma).\nGenera el contenido."
             with st.spinner("Creando descripciones únicas..."):
                 data = get_model_response(prompt)
                 if data and isinstance(data, dict):
@@ -124,13 +124,12 @@ with desc_col1:
                 else:
                     st.session_state.last_desc_generation = []
 
-
 with desc_col2:
     st.subheader("Resultados Listos para Copiar")
     if not st.session_state.last_desc_generation:
         st.info("Aquí aparecerán las descripciones generadas.")
     
-    for item in st.session_state.last_desc_generation:
+    for i, item in enumerate(st.session_state.last_desc_generation):
         if not isinstance(item, dict): continue
         unique_id = item.get('id', os.urandom(4).hex())
         st.markdown(f"**Idea #{unique_id}**")
